@@ -1,0 +1,17 @@
+# filename: render.yaml
+services:
+  - type: web
+    name: tennis-vision-api
+    env: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    envVars:
+      - key: YOLO_WEIGHTS_PATH
+        value: "yolo_tennis_best.pt"
+      - key: MOVENET_MODEL_DIR
+        value: "movenet_saved_model"
+      - key: SHOT_CLASSIFIER_WEIGHTS
+        value: "shot_classifier_best.pt"
+      - key: OPENAI_API_KEY
+        sync: false   # set this secret in Render dashboard
