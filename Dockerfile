@@ -23,8 +23,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . /app
 
+# optional, kept for clarity; Render uses $PORT, not this
 
-EXPOSE 8000  # optional, kept for clarity; Render uses $PORT, not this
+EXPOSE 8000  
 
 ENV YOLO_WEIGHTS_PATH="yolo_tennis_best.pt"
 ENV MOVENET_MODEL_DIR="movenet_saved_model"
