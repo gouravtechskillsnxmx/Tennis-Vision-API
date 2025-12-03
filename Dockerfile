@@ -23,10 +23,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . /app
 
-EXPOSE 8000
+
+EXPOSE 8000  # optional, kept for clarity; Render uses $PORT, not this
 
 ENV YOLO_WEIGHTS_PATH="yolo_tennis_best.pt"
 ENV MOVENET_MODEL_DIR="movenet_saved_model"
 ENV SHOT_CLASSIFIER_WEIGHTS="shot_classifier_best.pt"
 
-CMD ["uvicorn", "api_server:app", "--host", "0.0.0.0", "--port", "8000"]
+# IMPORTANT: bind to $PORT (Render sets this)
+CMD ["sh", "-c", "uvicorn api_server:app --host 0.0.0.0 --port ${PORT:-8000}"]
