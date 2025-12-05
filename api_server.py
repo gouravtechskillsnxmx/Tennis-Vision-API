@@ -8,10 +8,15 @@ app = FastAPI(title="Tennis Vision API")
 async def health():
     return {"status": "ok"}
 
+
 def run_analysis(video_path: str):
-    # heavy stuff imported *inside* the function
-    from main_pipeline import analyze_video
+    """
+    Lazy import so heavy modules are only loaded when needed.
+    For now, we use the minimal pipeline to debug stability.
+    """
+    from main_pipeline_minimal import analyze_video
     return analyze_video(video_path)
+
 
 @app.post("/analyze")
 async def analyze_endpoint(file: UploadFile = File(...)):
