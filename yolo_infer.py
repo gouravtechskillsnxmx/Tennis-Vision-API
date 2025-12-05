@@ -1,42 +1,41 @@
 # yolo_infer.py
-import logging
-from typing import List, Dict, Any
-
+import os
 from ultralytics import YOLO
-from config import YOLO_WEIGHTS_PATH
-
-logger = logging.getLogger("yolo_detector")
-
+import numpy as np
 
 class YOLODetector:
-    def __init__(self, weights_path: str | None = None):
-        self.weights_path = weights_path or YOLO_WEIGHTS_PATH
-        logger.info(f"[YOLODetector] Loading YOLO weights from: {self.weights_path}")
-        self.model = YOLO(self.weights_path)
+    def __init__(self, weights_path: str | None = None, device: str = "cpu"):
+        # If explicit path provided, use it; otherwise fall back to env or yolov8n.pt
+        model_name = (
+            weights_path
+            or os.getenv("YOLO_WEIGHTS_PATH")
+            or "yolov8n.pt"  # default built-in model
+        )
+        print(f"[YOLODetector] Loading YOLO model: {model_name}")
+        self.model = YOLO(model_name)
+        self.device = device
 
-    def detect(self, frame) -> List[Dict[str, Any]]:
-        """
-        Run YOLO inference on a single frame.
-        Returns a list of detections with bbox, class_id, confidence, etc.
-        """
-        results = self.model(frame, verbose=False)
+    def detect(self, frame: np.ndarray):
+        results = self.model(
+            frame,
+            device=self.device,
+            conf=0.3,
+            verbose=False
+        )[0]
+
         detections = []
-        if not results:
+        if results.boxes is None:
             return detections
 
-        r = results[0]
-        if r.boxes is None:
-            return detections
-
-        for box in r.boxes:
-            xyxy = box.xyxy[0].tolist()  # [x1, y1, x2, y2]
-            cls_id = int(box.cls[0].item())
-            conf = float(box.conf[0].item())
+        for box in results.boxes:
+            cls_id = int(box.cls.item())
+            conf = float(box.conf.item())
+            x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
             detections.append(
                 {
-                    "bbox": xyxy,
                     "class_id": cls_id,
                     "confidence": conf,
+                    "bbox": [x1, y1, x2, y2],
                 }
             )
         return detections
