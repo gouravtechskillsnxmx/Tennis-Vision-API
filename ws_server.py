@@ -137,9 +137,6 @@ def init_db() -> None:
 
 init_db()
 
-@app.get("/download-db")
-async def download_db():
-    return FileResponse("/data/call_logs.db", filename="call_logs.db")
 
 
 # ---------------------------------------------------------
@@ -232,6 +229,17 @@ async def import_call_logs(request: Request):
     conn.close()
 
     return {"status": "ok", "inserted": inserted}
+
+@app.get("/download-db")
+async def download_db():
+    """
+    Download the SQLite call_logs.db stored on Render persistent disk (/data).
+    """
+    db_path = "/data/call_logs.db"
+    if os.path.exists(db_path):
+        return FileResponse(db_path, filename="call_logs.db")
+    return {"status": "error", "message": "Database file not found on disk."}
+
 
 
 @app.get("/debug-sqlite-call-logs")
