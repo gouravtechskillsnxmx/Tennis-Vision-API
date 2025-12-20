@@ -1,17 +1,44 @@
-# filename: render.yaml
 services:
+  # ---------- Web API ----------
   - type: web
     name: tennis-vision-api
     env: docker
     plan: starter
+    branch: main
     dockerfilePath: ./Dockerfile
     autoDeploy: true
     envVars:
-      - key: YOLO_WEIGHTS_PATH
-        value: "yolo_tennis_best.pt"
-      - key: MOVENET_MODEL_DIR
-        value: "movenet_saved_model"
-      - key: SHOT_CLASSIFIER_WEIGHTS
-        value: "shot_classifier_best.pt"
+      - key: REDIS_URL
+        # Use internal URL of Redis instance once created
+        value: ${TENNIS_REDIS_URL}
+      - key: RQ_QUEUE_NAME
+        value: tennis
+      - key: DATA_DIR
+        value: /data
       - key: OPENAI_API_KEY
-        sync: false   # set this secret in Render dashboard
+        sync: false
+
+  # ---------- Worker (background analysis) ----------
+  - type: worker
+    name: tennis-vision-worker
+    env: docker
+    plan: starter
+    branch: main
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    dockerCommand: "python worker.py"
+    envVars:
+      - key: REDIS_URL
+        value: ${TENNIS_REDIS_URL}
+      - key: RQ_QUEUE_NAME
+        value: tennis
+      - key: DATA_DIR
+        value: /data
+      - key: OPENAI_API_KEY
+        sync: false
+
+  # ---------- Redis (queue backend) ----------
+  - type: redis
+    name: tennis-redis
+    ipAllowList: []   # private
+    plan: free

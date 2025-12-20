@@ -23,6 +23,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . /app
 
+# Ensure shared data dirs exist inside the container
+RUN mkdir -p /data/videos /data/results /data/overlays
+
 # optional, kept for clarity; Render uses $PORT, not this
 
 EXPOSE 8000  
@@ -33,3 +36,4 @@ ENV SHOT_CLASSIFIER_WEIGHTS="shot_classifier_best.pt"
 
 # IMPORTANT: bind to $PORT (Render sets this)
 CMD ["sh", "-c", "uvicorn api_server:app --host 0.0.0.0 --port ${PORT:-8000}"]
+

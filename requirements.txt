@@ -10,3 +10,9 @@ python-multipart
 mediapipe
 tensorflow==2.16.1
 openai
+redis
+rq
+ultralytics
+opencv-python
+torch
+
