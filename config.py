@@ -11,3 +11,8 @@ OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 DEFAULT_FPS = int(os.getenv("DEFAULT_FPS", "30"))
 MAX_FRAMES = int(os.getenv("MAX_FRAMES", "0"))  # 0 = default cap in utils
 
+MAX_SECONDS = int(os.getenv("MAX_SECONDS", "8"))   # default 8 seconds
+TARGET_FPS = int(os.getenv("TARGET_FPS", "12"))   # default 12 fps
+MAX_WIDTH = int(os.getenv("MAX_WIDTH", "640"))    # default 640px
+
+
