@@ -3,6 +3,11 @@ import os
 import uuid
 import shutil
 import logging
+import traceback
+
+logger = logging.getLogger("tennis-vision-api")
+logging.basicConfig(level=logging.INFO)
+
 from typing import Optional
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
@@ -37,54 +42,54 @@ job_queue = Queue(RQ_QUEUE_NAME, connection=redis_conn)
 # ---------- FastAPI app ----------
 app = FastAPI(title="Tennis Vision API", version="1.0.0")
 
+# api_server.py
+
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", "/tmp")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @app.get("/health")
 async def health():
-    """
-    Simple health endpoint so you (and Render) can verify the service is alive.
-    """
     return {"status": "ok"}
 
+def run_analysis(video_path: str):
+    # IMPORTANT: import inside function so startup is fast
+    from main_pipeline import analyze_video
+    return analyze_video(video_path)
 
 @app.post("/analyze")
-async def enqueue_analysis(file: UploadFile = File(...)):
-    """
-    Enqueue a video for background analysis.
-    - Saves the uploaded file to DATA_DIR/videos/{job_id}.mp4
-    - Enqueues an RQ job that runs worker.process_video_job(job_id)
-    - Returns job_id and initial status
-    """
-    # Generate job_id (also used as RQ job id)
-    job_id = uuid.uuid4().hex
+async def analyze_endpoint(file: UploadFile = File(...)):
+    tmp_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{file.filename}")
 
-    # Save video to disk
-    video_path = os.path.join(VIDEO_DIR, f"{job_id}.mp4")
     try:
-        with open(video_path, "wb") as f:
+        with open(tmp_path, "wb") as f:
             shutil.copyfileobj(file.file, f)
-        logger.info("Saved uploaded video to %s (job_id=%s)", video_path, job_id)
-    except Exception as e:
-        logger.exception("Failed to save uploaded file: %s", e)
-        raise HTTPException(status_code=500, detail="Failed to save uploaded file")
 
-    # Enqueue background job: worker.process_video_job(job_id)
-    try:
-        rq_job = job_queue.enqueue(
-            "worker.process_video_job",  # string: module.func
-            job_id,                      # arg passed to process_video_job
-            job_id=job_id,               # force RQ job id = our job_id
+        logger.info("Saved upload to %s", tmp_path)
+
+        result = run_analysis(tmp_path)
+        return JSONResponse(content=result)
+
+    except Exception as e:
+        logger.error("Error in /analyze: %s", e)
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={
+                "type_of_shot": "error",
+                "strengths": [],
+                "improvements": [f"Server error: {str(e)}"],
+                "score": 0,
+                "overlay_url": "",
+            },
         )
-        logger.info("Enqueued job %s on queue %s", rq_job.id, RQ_QUEUE_NAME)
-    except Exception as e:
-        logger.exception("Failed to enqueue job: %s", e)
-        raise HTTPException(status_code=500, detail="Failed to enqueue analysis job")
-
-    # Return lightweight response immediately
-    return {
-        "job_id": rq_job.id,
-        "status": rq_job.get_status(),  # 'queued'
-        "message": "Video received; analysis will run in background.",
-    }
+    finally:
+        try:
+            file.file.close()
+        except Exception:
+            pass
+        # optional cleanup:
+        # try: os.remove(tmp_path)
+        # except: pass
 
 
 @app.get("/jobs/{job_id}")
