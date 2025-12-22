@@ -81,7 +81,8 @@ def process_frames(
     }
 
 def analyze_video(video_path: str) -> Dict[str, Any]:
-    frames = extract_frames(video_path, target_fps=DEFAULT_FPS)
+    
+    frames = extract_frames(video_path)
     yolo = YOLODetector()
     tracker = SimpleTracker()
     pose_model = MoveNetPose()
