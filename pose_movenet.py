@@ -1,7 +1,6 @@
 # filename: pose_movenet.py
 import cv2
 import numpy as np
-import tensorflow as tf
 from typing import Dict, Any
 from config import MOVENET_SAVED_MODEL_DIR
 
