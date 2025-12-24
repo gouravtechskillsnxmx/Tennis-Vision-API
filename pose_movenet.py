@@ -1,12 +1,54 @@
 # pose_movenet.py
 # Drop-in replacement for Option 1: NO TensorFlow.
 # Keeps class name MoveNetPose but uses MediaPipe Pose internally.
+#
+# This version is robust against:
+# - mediapipe.solutions not being exposed (import path differences)
+# - accidental "mediapipe.py" or "mediapipe/" in your repo shadowing the real package
 
 from __future__ import annotations
 from typing import Dict, Any, Optional, List
 import numpy as np
 import cv2
+
 import mediapipe as mp
+
+
+def _get_mediapipe_solutions():
+    """
+    Return the mediapipe solutions module in a robust way.
+
+    If this fails, it usually means you're importing a WRONG mediapipe module
+    (e.g., a local mediapipe.py file or mediapipe/ folder shadowing site-packages).
+    """
+    # Most common and expected
+    if hasattr(mp, "solutions"):
+        return mp.solutions
+
+    # Fallback for some packaging/layout differences
+    try:
+        from mediapipe import solutions as solutions_mod  # type: ignore
+        return solutions_mod
+    except Exception:
+        pass
+
+    try:
+        import mediapipe.python.solutions as solutions_mod  # type: ignore
+        return solutions_mod
+    except Exception:
+        pass
+
+    # Give a helpful diagnostic
+    mp_file = getattr(mp, "__file__", "UNKNOWN")
+    mp_dir = getattr(mp, "__path__", "UNKNOWN")
+    raise RuntimeError(
+        "MediaPipe import is not the official package or is missing 'solutions'.\n"
+        f"Imported mediapipe from: {mp_file}\n"
+        f"mediapipe __path__: {mp_dir}\n"
+        "Most common cause: your repo contains a file named 'mediapipe.py' or a folder named 'mediapipe' "
+        "which shadows the real package.\n"
+        "Fix: rename/delete that local file/folder, then redeploy."
+    )
 
 
 class MoveNetPose:
@@ -28,7 +70,9 @@ class MoveNetPose:
         min_detection_confidence: float = 0.5,
         min_tracking_confidence: float = 0.5,
     ):
-        self._mp_pose = mp.solutions.pose
+        solutions = _get_mediapipe_solutions()
+        self._mp_pose = solutions.pose
+
         self._pose = self._mp_pose.Pose(
             static_image_mode=static_image_mode,
             model_complexity=model_complexity,

@@ -9,5 +9,6 @@ torch
 torchvision
 ultralytics==8.3.0
 
-mediapipe
+mediapipe==0.10.14
 openai
+
